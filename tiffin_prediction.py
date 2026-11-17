@@ -1,8 +1,20 @@
+
+import streamlit as st
 import pandas as pd
+
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
+
+st.set_page_config(
+    page_title="TiffinAI Dashboard",
+    page_icon="🍱",
+    layout="centered"
+)
+
+st.title("🍱 TiffinAI")
+st.subheader("Smart Tiffin Sales and Demand Prediction")
 
 # Sample dataset
 data = pd.DataFrame({
@@ -16,21 +28,15 @@ data = pd.DataFrame({
     "Tiffins": [78,82,70,89,96,84,80,77,84,72,91,98,87,83]
 })
 
-# Input and target
 X = data.drop(columns="Tiffins")
 y = data["Tiffins"]
 
-# Features
-categorical_features = ["Day", "Menu", "Holiday"]
-numeric_features = ["Customers", "Previous_Orders"]
-
-# Convert categorical data
 preprocessor = ColumnTransformer([
-    ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
-    ("num", "passthrough", numeric_features)
+    ("cat", OneHotEncoder(handle_unknown="ignore"),
+     ["Day", "Menu", "Holiday"]),
+    ("num", "passthrough", ["Customers", "Previous_Orders"])
 ])
 
-# Random Forest model
 model = Pipeline([
     ("preprocessor", preprocessor),
     ("regressor", RandomForestRegressor(
@@ -39,20 +45,60 @@ model = Pipeline([
     ))
 ])
 
-# Train model
 model.fit(X, y)
 
-# New data for prediction
-new_data = pd.DataFrame({
-    "Day": ["Thu"],
-    "Customers": [81],
-    "Previous_Orders": [79],
-    "Menu": ["Veg"],
-    "Holiday": ["No"]
-})
+st.markdown("### Enter Prediction Details")
 
-# Prediction
-prediction = model.predict(new_data)[0]
+day = st.selectbox(
+    "Select Day",
+    ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+)
 
-print("Predicted Tiffin Demand:", round(prediction))
-print("Planning Quantity:", round(prediction) + 3) se
+customers = st.number_input(
+    "Expected Customers",
+    min_value=1,
+    max_value=500,
+    value=80
+)
+
+previous_orders = st.number_input(
+    "Previous Orders",
+    min_value=1,
+    max_value=500,
+    value=78
+)
+
+menu = st.selectbox("Select Menu", ["Thali", "Veg"])
+
+holiday = st.selectbox("Holiday?", ["No", "Yes"])
+
+if st.button("Predict Tiffin Demand"):
+    new_data = pd.DataFrame({
+        "Day": [day],
+        "Customers": [customers],
+        "Previous_Orders": [previous_orders],
+        "Menu": [menu],
+        "Holiday": [holiday]
+    })
+
+    prediction = model.predict(new_data)[0]
+
+    st.success("Prediction Completed!")
+
+    st.metric(
+        "Predicted Tiffin Demand",
+        f"{round(prediction)} Tiffins"
+    )
+
+    st.metric(
+        "Recommended Planning Quantity",
+        f"{int(prediction + 3)} Tiffins"
+    )
+
+    st.info(
+        "Planning quantity includes 3 additional tiffins "
+        "as a manually selected safety buffer."
+    )
+
+st.markdown("---")
+st.caption("TiffinAI | Machine Learning Project by Priyanka Varindani")
